@@ -1,0 +1,38 @@
+stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  APP_NAME: "my-python-app"
+  IMAGE_NAME: "my-registry/my-python-app"
+  DOCKER_REGISTRY_USER: "my-registry-user"
+  DOCKER_REGISTRY_PASSWORD: "${REGISTRY_PASSWORD}" # This is a variable that you need to define in your GitLab project settings
+
+build:
+  stage: build
+  image: python:3.9
+  script:
+    - pip install -r requirements.txt
+    - python setup.py sdist
+  artifacts:
+    paths:
+      - dist/*.tar.gz
+
+test:
+  stage: test
+  image: python:3.9
+  script:
+    - pip install -r requirements.txt
+    - pip install pytest
+    - pytest tests/
+
+deploy:
+  stage: deploy
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - echo "$DOCKER_REGISTRY_PASSWORD" | docker login -u "$DOCKER_REGISTRY_USER" --password-stdin
+    - docker build -t "$IMAGE_NAME" .
+    - docker push "$IMAGE_NAME"
